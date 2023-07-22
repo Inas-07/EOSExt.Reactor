@@ -2,11 +2,13 @@
 using BepInEx.Unity.IL2CPP;
 using HarmonyLib;
 using ExtraObjectiveSetup.JSON;
+using EOSExt.Reactor.Managers;
+using ExtraObjectiveSetup.Utils;
 
-namespace ExtraObjectiveSetup
+namespace EOSExt.Reactor
 {
     [BepInDependency("dev.gtfomodding.gtfo-api", BepInDependency.DependencyFlags.HardDependency)]
-    [BepInDependency(MTFOUtil.PLUGIN_GUID, BepInDependency.DependencyFlags.HardDependency)]
+    [BepInDependency("Inas.ExtraObjectiveSetup", BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency(MTFOPartialDataUtil.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(AWOUtil.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInPlugin(AUTHOR + "." + PLUGIN_NAME, PLUGIN_NAME, VERSION)]
@@ -14,17 +16,18 @@ namespace ExtraObjectiveSetup
     public class EntryPoint: BasePlugin
     {
         public const string AUTHOR = "Inas";
-        public const string PLUGIN_NAME = "ExtraObjectiveSetup";
-        public const string VERSION = "1.3.0";
+        public const string PLUGIN_NAME = "EOSExt.Reactor";
+        public const string VERSION = "1.0.0";
 
         private Harmony m_Harmony;
         
         public override void Load()
         {
-            m_Harmony = new Harmony("ExtraObjectiveSetup");
+            m_Harmony = new Harmony("EOSExt.Reactor");
             m_Harmony.PatchAll();
 
             SetupManagers();
+            EOSLogger.Log("ExtraObjectiveSetup.Reactor loaded.");
         }
 
         /// <summary>
@@ -32,17 +35,7 @@ namespace ExtraObjectiveSetup
         /// </summary>
         private void SetupManagers()
         {
-            BatchBuildManager.Current.Init();
-
-            Objectives.IndividualGenerator.IndividualGeneratorObjectiveManager.Current.Init();
-            Objectives.GeneratorCluster.GeneratorClusterObjectiveManager.Current.Init();
-            Objectives.ActivateSmallHSU.HSUActivatorObjectiveManager.Current.Init();
-            Objectives.TerminalUplink.UplinkObjectiveManager.Current.Init();
-            Objectives.Reactor.Shutdown.ReactorShutdownObjectiveManager.Current.Init();
-
-            Tweaks.TerminalPosition.TerminalPositionOverrideManager.Current.Init();
-            Tweaks.Scout.ScoutScreamEventManager.Current.Init();
-            Tweaks.BossEvents.BossDeathEventManager.Current.Init();
+            ReactorShutdownObjectiveManager.Current.Init();
         }
     }
 }
