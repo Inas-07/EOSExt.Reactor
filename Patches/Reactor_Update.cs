@@ -2,7 +2,6 @@
 using Localization;
 using LevelGeneration;
 using GameData;
-using ExtraObjectiveSetup.Utils;
 
 namespace EOSExt.Reactor.Patches
 {

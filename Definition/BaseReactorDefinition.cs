@@ -3,18 +3,19 @@ using ExtraObjectiveSetup.BaseClasses;
 using GameData;
 using ChainedPuzzles;
 using System.Text.Json.Serialization;
+using ExtraObjectiveSetup.BaseClasses.CustomTerminalDefinition;
 
 namespace EOSExt.Reactor.Definition
 {
     public class BaseReactorDefinition : BaseInstanceDefinition
     {
-        public bool LightsOnFromBeginning { get; set; } = true;
-
-        public uint ChainedPuzzleToActive { get; set; } = 0u;
-
+        [JsonPropertyOrder(-9)]
+        public TerminalDefinition ReactorTerminal { set; get; } = new();
+        
+        [JsonPropertyOrder(-9)]
+        public List<WardenObjectiveEventData> EventsOnActive { get; set; } = new();
+    
         [JsonIgnore]
         public ChainedPuzzleInstance ChainedPuzzleToActiveInstance { get; set; } = null;
-
-        public List<WardenObjectiveEventData> EventsOnActive { get; set; } = new();
     }
 }

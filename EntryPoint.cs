@@ -1,16 +1,19 @@
 ﻿using BepInEx;
 using BepInEx.Unity.IL2CPP;
 using HarmonyLib;
+using ExtraObjectiveSetup.ExtendedWardenEvents;
 using ExtraObjectiveSetup.JSON;
 using EOSExt.Reactor.Managers;
 using ExtraObjectiveSetup.Utils;
-
+using Il2CppInterop.Runtime.Injection;
+using EOSExt.Reactor.Component;
+using EOSExt.Reactor.Definition;
 namespace EOSExt.Reactor
 {
     [BepInDependency("dev.gtfomodding.gtfo-api", BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency("Inas.ExtraObjectiveSetup", BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency(MTFOPartialDataUtil.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInDependency(AWOUtil.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(InjectLibUtil.PLUGIN_GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInPlugin(AUTHOR + "." + PLUGIN_NAME, PLUGIN_NAME, VERSION)]
     
     public class EntryPoint: BasePlugin
@@ -27,6 +30,8 @@ namespace EOSExt.Reactor
             m_Harmony.PatchAll();
 
             SetupManagers();
+            SetupExtraWardenEventDefinitions();
+            ClassInjector.RegisterTypeInIl2Cpp<OverrideReactorComp>();
             EOSLogger.Log("ExtraObjectiveSetup.Reactor loaded.");
         }
 
@@ -36,6 +41,13 @@ namespace EOSExt.Reactor
         private void SetupManagers()
         {
             ReactorShutdownObjectiveManager.Current.Init();
+            ReactorStartupOverrideManager.Current.Init();
+        }
+
+        private void SetupExtraWardenEventDefinitions()
+        {
+            EOSWardenEventManager.Current.AddEventDefinition(WardenEvents.EventType.ReactorStartup.ToString(), (uint)WardenEvents.EventType.ReactorStartup, WardenEvents.ReactorStartup);
+            EOSWardenEventManager.Current.AddEventDefinition(WardenEvents.EventType.CompleteCurrentVerify.ToString(), (uint)WardenEvents.EventType.CompleteCurrentVerify, WardenEvents.CompleteCurrentVerify);
         }
     }
 }

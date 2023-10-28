@@ -2,7 +2,9 @@
 using AK;
 using ChainedPuzzles;
 using EOSExt.Reactor.Definition;
+using ExtraObjectiveSetup;
 using ExtraObjectiveSetup.BaseClasses;
+using ExtraObjectiveSetup.BaseClasses.CustomTerminalDefinition;
 using ExtraObjectiveSetup.Instances;
 using ExtraObjectiveSetup.Utils;
 using GameData;
@@ -21,7 +23,7 @@ namespace EOSExt.Reactor.Managers
 
         protected override string DEFINITION_NAME => "ReactorShutdown";
 
-        private static void GenericObjectiveSetup(LG_WardenObjective_Reactor reactor)
+        private void GenericObjectiveSetup(LG_WardenObjective_Reactor reactor, TerminalDefinition reactorTerminalData)
         {
             reactor.m_serialNumber = SerialGenerator.GetUniqueSerialNo();
             reactor.m_itemKey = "REACTOR_" + reactor.m_serialNumber.ToString();
@@ -32,7 +34,6 @@ namespace EOSExt.Reactor.Managers
             reactor.m_overrideCodes = new string[1] { SerialGenerator.GetCodeWord() };
             //reactor.CurrentStateOverrideCode = reactor.m_overrideCodes[0];
 
-            // TODO: 泛型类型换成System list，编译不会报错？真的假的
             reactor.m_terminalItem.OnWantDetailedInfo = new System.Func<Il2CppSystem.Collections.Generic.List<string>, Il2CppSystem.Collections.Generic.List<string>>(defaultDetails =>
             {
                 List<string> stringList = new List<string>
@@ -51,29 +52,23 @@ namespace EOSExt.Reactor.Managers
             reactor.m_terminal = GOUtil.SpawnChildAndGetComp<LG_ComputerTerminal>(reactor.m_terminalPrefab, reactor.m_terminalAlign);
             reactor.m_terminal.Setup();
             reactor.m_terminal.ConnectedReactor = reactor;
+
+            ReactorInstanceManager.Current.SetupReactorTerminal(reactor, reactorTerminalData);
         }
 
         // create method with same name as in vanilla mono
-        private static void OnLateBuildJob(LG_WardenObjective_Reactor reactor)
+        private void OnLateBuildJob(LG_WardenObjective_Reactor reactor, BaseReactorDefinition reactorDefinition)
         {
             reactor.m_stateReplicator = SNet_StateReplicator<pReactorState, pReactorInteraction>.Create(new iSNet_StateReplicatorProvider<pReactorState, pReactorInteraction>(reactor.Pointer), eSNetReplicatorLifeTime.DestroyedOnLevelReset);
-            GenericObjectiveSetup(reactor);
+            GenericObjectiveSetup(reactor, reactorDefinition.ReactorTerminal);
+            reactor.m_sound = new CellSoundPlayer(reactor.m_terminalAlign.position);
             reactor.m_sound.Post(EVENTS.REACTOR_POWER_LEVEL_1_LOOP);
             reactor.m_sound.SetRTPCValue(GAME_PARAMETERS.REACTOR_POWER, 100f);
             reactor.m_terminal.m_command.SetupReactorCommands(false, true);
         }
 
-        private void Build(ReactorShutdownDefinition def)
+        internal void Build(LG_WardenObjective_Reactor reactor, ReactorShutdownDefinition def)
         {
-            //return; // untested, so no release for now
-
-            var reactor = ReactorInstanceManager.Current.GetInstance(def.GlobalZoneIndexTuple(), def.InstanceIndex);
-            if (reactor == null)
-            {
-                EOSLogger.Error($"ReactorShutdown: Found unused reactor definition: {def.GlobalZoneIndexTuple()}, Instance_{def.InstanceIndex}");
-                return;
-            }
-
             if (reactor.m_isWardenObjective)
             {
                 EOSLogger.Error($"ReactorShutdown: Reactor definition for reactor {def.GlobalZoneIndexTuple()}, Instance_{def.InstanceIndex} is already setup by vanilla, won't build.");
@@ -81,10 +76,10 @@ namespace EOSExt.Reactor.Managers
             }
 
             // on late build job
-            OnLateBuildJob(reactor);
+            OnLateBuildJob(reactor, def);
 
             reactor.m_lightCollection = LG_LightCollection.Create(reactor.m_reactorArea.m_courseNode, reactor.m_terminalAlign.position, LG_LightCollectionSorting.Distance);
-            reactor.m_lightCollection.SetMode(def.LightsOnFromBeginning);
+            reactor.m_lightCollection.SetMode(true);
 
             if (def.PutVerificationCodeOnTerminal)
             {
@@ -109,31 +104,7 @@ namespace EOSExt.Reactor.Managers
                     verifyTerminal.m_command.ClearOutputQueueAndScreenBuffer();
                     verifyTerminal.m_command.AddInitialTerminalOutput();
                 }
-
-                //reactor.m_currentWaveData = new ReactorWaveData()
-                //{
-                //    HasVerificationTerminal = def.PutVerificationCodeOnTerminal && verifyTerminal != null,
-                //    VerificationTerminalSerial = verifyTerminal != null ? verifyTerminal.ItemKey : string.Empty,
-                //    Warmup = 1.0f,
-                //    WarmupFail = 1.0f,
-                //    Wave = 1.0f,
-                //    Verify = 1.0f,
-                //    VerifyFail = 1.0f,
-                //};
             }
-            //else
-            //{
-            //    reactor.m_currentWaveData = new ReactorWaveData()
-            //    {
-            //        HasVerificationTerminal = false,
-            //        VerificationTerminalSerial = string.Empty,
-            //        Warmup = 1.0f,
-            //        WarmupFail = 1.0f,
-            //        Wave = 1.0f,
-            //        Verify = 1.0f,
-            //        VerifyFail = 1.0f,
-            //    };
-            //}
 
             if (reactor.SpawnNode != null && reactor.m_terminalItem != null)
             {
@@ -204,13 +175,6 @@ namespace EOSExt.Reactor.Managers
             EOSLogger.Debug($"ReactorShutdown: {def.GlobalZoneIndexTuple()}, Instance_{def.InstanceIndex}, custom setup completed");
         }
 
-        // TODO: HOW TO HANDLE THE update() ?
-        private void OnBuildDone()
-        {
-            if (!definitions.ContainsKey(RundownManager.ActiveExpedition.LevelLayoutData)) return;
-            definitions[RundownManager.ActiveExpedition.LevelLayoutData].Definitions.ForEach(Build);
-        }
-
         private void OnLevelCleanup()
         {
             if (!definitions.ContainsKey(RundownManager.ActiveExpedition.LevelLayoutData)) return;
@@ -223,11 +187,9 @@ namespace EOSExt.Reactor.Managers
 
         private ReactorShutdownObjectiveManager() : base()
         {
-            //BatchBuildManager.Current.Add_OnBeforeFactoryDone(OnBuildDone);
-            //BatchBuildManager.Current.Add_OnBatchDone(LG_Factory.BatchName.FinalLogicLinking, OnBuildDone);
-            // due to the nature of vanilla build of reactor objective, we put its build OnBuildDone
-            LevelAPI.OnBuildDone += OnBuildDone;
+            // Reactor Build is done in the postfix patch LG_WardenObjective_Reactor.OnBuildDone, instead of in LevelAPI.OnBuildDone
             LevelAPI.OnLevelCleanup += OnLevelCleanup;
+            LevelAPI.OnBuildStart += OnLevelCleanup;
         }
 
         static ReactorShutdownObjectiveManager()

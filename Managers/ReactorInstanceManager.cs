@@ -1,4 +1,6 @@
 ﻿using ExtraObjectiveSetup.BaseClasses;
+using ExtraObjectiveSetup.BaseClasses.CustomTerminalDefinition;
+using ExtraObjectiveSetup.Utils;
 using GameData;
 using GTFO.API;
 using LevelGeneration;
@@ -15,7 +17,7 @@ namespace EOSExt.Reactor.Managers
 
         private HashSet<IntPtr> startupReactor = new();
         private HashSet<IntPtr> shutdownReactor = new();
-
+        
         public void MarkAsStartupReactor(LG_WardenObjective_Reactor reactor)
         {
             if (shutdownReactor.Contains(reactor.Pointer))
@@ -42,9 +44,58 @@ namespace EOSExt.Reactor.Managers
 
         private void Clear()
         {
+            foreach(var reactor_ptr in startupReactor)
+            {
+                var reactor = new LG_WardenObjective_Reactor(reactor_ptr);
+                reactor?.m_sound?.Recycle();
+            }
+
+            foreach (var reactor_ptr in shutdownReactor)
+            {
+                var reactor = new LG_WardenObjective_Reactor(reactor_ptr);
+                reactor?.m_sound?.Recycle();
+            }
+
             startupReactor.Clear();
             shutdownReactor.Clear();
         }
+
+        /// <summary>
+        /// Build password, uniquecommands, local logs for reactor terminal
+        /// </summary>
+        /// <param name="reactor"></param>
+        /// <param name="reactorTerminalData"></param>
+        public void SetupReactorTerminal(LG_WardenObjective_Reactor reactor, TerminalDefinition reactorTerminalData)
+        {
+            // NOTE: we are now supposed to be in LG_WardenObjective_Reactor, when terminal passwords have been built
+            // Still, we add the reactor terminal to m_zone.TerminalsSpawnedInZone, to make indexing it (via instance index) more convenient.
+            reactor.SpawnNode.m_zone.TerminalsSpawnedInZone.Add(reactor.m_terminal); // make adding password log to reactor terminal a thing
+
+            // reactor terminal setup
+            if (reactorTerminalData == null) return;
+            reactorTerminalData.LocalLogFiles?.ForEach(log => reactor.m_terminal.AddLocalLog(log, true));
+            reactorTerminalData.UniqueCommands?.ForEach(cmd => EOSTerminalUtils.AddUniqueCommand(reactor.m_terminal, cmd));
+            EOSTerminalUtils.BuildPassword(reactor.m_terminal, reactorTerminalData.PasswordData);
+        }
+
+        public static LG_WardenObjective_Reactor FindVanillaReactor(LG_LayerType layer)
+        {
+            LG_WardenObjective_Reactor reactor = null;
+            foreach (var keyvalue in WardenObjectiveManager.Current.m_wardenObjectiveItem)
+            {
+                if (keyvalue.Key.Layer != layer)
+                    continue;
+
+                reactor = keyvalue.Value?.TryCast<LG_WardenObjective_Reactor>();
+                if (reactor == null)
+                    continue;
+
+                break;
+            }
+
+            return reactor;
+        }
+
 
         private ReactorInstanceManager()
         {

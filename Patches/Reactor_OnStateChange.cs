@@ -47,7 +47,7 @@ namespace EOSExt.Reactor.Patches
                         def.ChainedPuzzleOnVerificationInstance.AttemptInteract(eChainedPuzzleInteraction.Activate);
                     }
 
-                    def.EventsOnVerification.ForEach(e => WardenObjectiveManager.CheckAndExecuteEventsOnTrigger(e, eWardenObjectiveEventTrigger.None, true));
+                    def.EventsOnShutdownPuzzleStarts.ForEach(e => WardenObjectiveManager.CheckAndExecuteEventsOnTrigger(e, eWardenObjectiveEventTrigger.None, true));
 
                     break;
 

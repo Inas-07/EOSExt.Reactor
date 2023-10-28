@@ -19,7 +19,7 @@ namespace EOSExt.Reactor.Patches
                 return true;
             }
 
-            if (reactor.m_isWardenObjective) return true;
+            if (reactor.m_isWardenObjective) return true; // Could only be reactor startup, or vanilla reactor shutdown
             var code = param1;
 
             if (reactor.ReadyForVerification && code == reactor.CurrentStateOverrideCode)
