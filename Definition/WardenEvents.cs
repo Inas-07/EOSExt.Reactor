@@ -17,7 +17,7 @@ namespace EOSExt.Reactor.Definition
         internal static void ReactorStartup(WardenObjectiveEventData e)
         {
             if (!SNet.IsMaster) return;
-            LG_WardenObjective_Reactor reactor = ReactorInstanceManager.FindVanillaReactor(e.Layer);
+            LG_WardenObjective_Reactor reactor = ReactorInstanceManager.FindVanillaReactor(e.Layer, e.Count);
 
             WardenObjectiveDataBlock data;
             if (!WardenObjectiveManager.Current.TryGetActiveWardenObjectiveData(e.Layer, out data) || data == null)
@@ -69,7 +69,7 @@ namespace EOSExt.Reactor.Definition
                 return;
             }
 
-            LG_WardenObjective_Reactor reactor = ReactorInstanceManager.FindVanillaReactor(e.Layer);
+            LG_WardenObjective_Reactor reactor = ReactorInstanceManager.FindVanillaReactor(e.Layer, e.Count);
 
             if (reactor == null)
             {

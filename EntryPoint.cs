@@ -20,7 +20,7 @@ namespace EOSExt.Reactor
     {
         public const string AUTHOR = "Inas";
         public const string PLUGIN_NAME = "EOSExt.Reactor";
-        public const string VERSION = "1.0.1";
+        public const string VERSION = "1.0.2";
 
         private Harmony m_Harmony;
         

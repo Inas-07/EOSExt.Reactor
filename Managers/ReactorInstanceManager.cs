@@ -78,9 +78,16 @@ namespace EOSExt.Reactor.Managers
             EOSTerminalUtils.BuildPassword(reactor.m_terminal, reactorTerminalData.PasswordData);
         }
 
-        public static LG_WardenObjective_Reactor FindVanillaReactor(LG_LayerType layer)
+        public static LG_WardenObjective_Reactor FindVanillaReactor(LG_LayerType layer, int count)
         {
+            if(count < 0)
+            {
+                EOSLogger.Error($"FindVanillaReactor: Count should be non-negative, but got {count}!");
+                return null;
+            }
+
             LG_WardenObjective_Reactor reactor = null;
+            int c = count;
             foreach (var keyvalue in WardenObjectiveManager.Current.m_wardenObjectiveItem)
             {
                 if (keyvalue.Key.Layer != layer)
@@ -90,10 +97,23 @@ namespace EOSExt.Reactor.Managers
                 if (reactor == null)
                     continue;
 
-                break;
+                if (c <= 0)
+                {
+                    break;
+                }
+                else
+                {
+                    reactor = null; // null out explicitly
+                    c--;
+                    continue;
+                }
             }
 
-            return reactor;
+            if(reactor == null)
+            {
+                EOSLogger.Error($"FindVanillaReactor: reactor not found with index(Count) {c} in {layer}!");
+            }
+            return reactor; // will return null if not found
         }
 
 
