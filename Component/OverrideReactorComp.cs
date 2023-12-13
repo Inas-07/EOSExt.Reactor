@@ -153,10 +153,16 @@ namespace EOSExt.Reactor.Component
                 TerminalLogFileData verifyLog = null;
                 if (waveData.VerifyInOtherZone)
                 {
-                    LG_ComputerTerminal origTerminal = EOSTerminalUtils.FindTerminal(
+                    var terminalsInZone = EOSTerminalUtils.FindTerminal(
                         ChainedReactor.SpawnNode.m_dimension.DimensionIndex, ChainedReactor.SpawnNode.LayerType, waveData.ZoneForVerification,
-                        x => x.m_serialNumber.ToString() == waveData.VerificationTerminalSerial)?[0];
-
+                        x => x.ItemKey == waveData.VerificationTerminalSerial);
+                    if (terminalsInZone == null || terminalsInZone.Count < 1)
+                    {
+                        EOSLogger.Error($"Wave_{waveOverride.WaveIndex}: cannot find vanilla verification terminal in {(ChainedReactor.SpawnNode.m_dimension.DimensionIndex, ChainedReactor.SpawnNode.LayerType, waveData.ZoneForVerification)}, unable to override");
+                        continue;
+                    }
+                    LG_ComputerTerminal origTerminal = terminalsInZone[0];
+                    
                     if (origTerminal == null)
                     {
                         EOSLogger.Error($"VerifyZoneOverrides: Wave_{waveOverride.WaveIndex} - Cannot find log terminal");

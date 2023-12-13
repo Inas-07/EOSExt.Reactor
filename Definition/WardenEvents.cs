@@ -17,6 +17,7 @@ namespace EOSExt.Reactor.Definition
         internal static void ReactorStartup(WardenObjectiveEventData e)
         {
             if (!SNet.IsMaster) return;
+            LG_WardenObjective_Reactor reactor = ReactorInstanceManager.FindVanillaReactor(e.Layer);
 
             WardenObjectiveDataBlock data;
             if (!WardenObjectiveManager.Current.TryGetActiveWardenObjectiveData(e.Layer, out data) || data == null)
@@ -24,13 +25,12 @@ namespace EOSExt.Reactor.Definition
                 EOSLogger.Error("CompleteCurrentReactorWave: Cannot get WardenObjectiveDataBlock");
                 return;
             }
+
             if (data.Type != eWardenObjectiveType.Reactor_Startup)
             {
                 EOSLogger.Error($"CompleteCurrentReactorWave: {e.Layer} is not ReactorStartup. CompleteCurrentReactorWave is invalid.");
                 return;
             }
-
-            LG_WardenObjective_Reactor reactor = ReactorInstanceManager.FindVanillaReactor(e.Layer);
 
             if (reactor == null)
             {
