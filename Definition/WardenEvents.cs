@@ -54,10 +54,8 @@ namespace EOSExt.Reactor.Definition
 
         internal static void CompleteCurrentVerify(WardenObjectiveEventData e)
         {
-            if (!SNet.IsMaster) return;
 
-            WardenObjectiveDataBlock data;
-            if (!WardenObjectiveManager.Current.TryGetActiveWardenObjectiveData(e.Layer, out data) || data == null)
+            if (!WardenObjectiveManager.Current.TryGetActiveWardenObjectiveData(e.Layer, out var data) || data == null)
             {
                 EOSLogger.Error("CompleteCurrentReactorWave: Cannot get WardenObjectiveDataBlock");
                 return;
@@ -77,10 +75,17 @@ namespace EOSExt.Reactor.Definition
                 return;
             }
 
-            if (reactor.m_currentWaveCount == reactor.m_waveCountMax)
-                reactor.AttemptInteract(eReactorInteraction.Finish_startup);
-            else
-                reactor.AttemptInteract(eReactorInteraction.Verify_startup);
+            if (SNet.IsMaster)
+            {
+                if (reactor.m_currentWaveCount == reactor.m_waveCountMax)
+                    reactor.AttemptInteract(eReactorInteraction.Finish_startup);
+                else
+                    reactor.AttemptInteract(eReactorInteraction.Verify_startup);
+            }
+            else // execute OnEnd event on client side 
+            {
+                WardenObjectiveManager.CheckAndExecuteEventsOnTrigger(reactor.m_currentWaveData.Events, eWardenObjectiveEventTrigger.OnEnd, false);
+            }
 
             EOSLogger.Debug($"CompleteCurrentReactorWave: Current reactor verify for {e.Layer} completed");
         }

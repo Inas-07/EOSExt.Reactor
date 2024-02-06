@@ -4,6 +4,7 @@ using ExtraObjectiveSetup.BaseClasses;
 using ExtraObjectiveSetup.Utils;
 using GameData;
 using GTFO.API;
+using System.Collections.Generic;
 using LevelGeneration;
 using Localization;
 
@@ -40,6 +41,8 @@ namespace EOSExt.Reactor.Managers
 
         public static ReactorStartupOverrideManager Current { get; private set; } = new();
 
+        private List<ReactorStartupOverride> builtOverride = new();
+
         protected override string DEFINITION_NAME => "ReactorStartup";
 
         protected override void AddDefinitions(InstanceDefinitionsForLevel<ReactorStartupOverride> definitions)
@@ -73,18 +76,15 @@ namespace EOSExt.Reactor.Managers
                 );
             }
 
+            builtOverride.Add(def);
             EOSLogger.Debug($"ReactorStartup: {def.GlobalZoneIndexTuple()}, Instance_{def.InstanceIndex}, override completed");
         }
 
         private void OnLevelCleanup()
         {
-            if (!definitions.ContainsKey(RundownManager.ActiveExpedition.LevelLayoutData)) return;
-            definitions[RundownManager.ActiveExpedition.LevelLayoutData].Definitions.ForEach(def =>
-            {
-                def.ChainedPuzzleToActiveInstance = null;
-            });
+            builtOverride.ForEach(def => { def.ChainedPuzzleToActiveInstance = null; });
+            builtOverride.Clear();
         }
-
 
         private ReactorStartupOverrideManager() : base()
         {

@@ -73,6 +73,11 @@ namespace EOSExt.Reactor.Patches
                     else
                         reactor.AttemptInteract(eReactorInteraction.Verify_startup);
                 }
+                else
+                {
+                    // execute OnEndEvents on client side 
+                    WardenObjectiveManager.CheckAndExecuteEventsOnTrigger(reactor.m_currentWaveData.Events, eWardenObjectiveEventTrigger.OnEnd, false); 
+                }
 
                 __instance.AddOutput(ReactorStartupOverrideManager.CorrectTerminalOutputText);
             }

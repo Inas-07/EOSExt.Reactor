@@ -23,6 +23,8 @@ namespace EOSExt.Reactor.Managers
 
         protected override string DEFINITION_NAME => "ReactorShutdown";
 
+        private List<ReactorShutdownDefinition> builtShutdownPuzzles = new();
+
         private void GenericObjectiveSetup(LG_WardenObjective_Reactor reactor, TerminalDefinition reactorTerminalData)
         {
             reactor.m_serialNumber = SerialGenerator.GetUniqueSerialNo();
@@ -171,18 +173,22 @@ namespace EOSExt.Reactor.Managers
             reactor.SetLightsEnabled(reactor.m_lightsWhenOff, false);
             reactor.SetLightsEnabled(reactor.m_lightsWhenOn, true);
 
+            builtShutdownPuzzles.Add(def);
+
             ReactorInstanceManager.Current.MarkAsShutdownReactor(reactor);
             EOSLogger.Debug($"ReactorShutdown: {def.GlobalZoneIndexTuple()}, Instance_{def.InstanceIndex}, custom setup completed");
         }
 
         private void OnLevelCleanup()
         {
-            if (!definitions.ContainsKey(RundownManager.ActiveExpedition.LevelLayoutData)) return;
-            definitions[RundownManager.ActiveExpedition.LevelLayoutData].Definitions.ForEach(def =>
-            {
-                def.ChainedPuzzleToActiveInstance = null;
-                def.ChainedPuzzleOnVerificationInstance = null;
-            });
+            //if (!definitions.ContainsKey(RundownManager.ActiveExpedition.LevelLayoutData)) return;
+            //definitions[RundownManager.ActiveExpedition.LevelLayoutData].Definitions.ForEach(def =>
+            //{
+            //    def.ChainedPuzzleToActiveInstance = null;
+            //    def.ChainedPuzzleOnVerificationInstance = null;
+            //});
+            builtShutdownPuzzles.ForEach(def => { def.ChainedPuzzleOnVerificationInstance = def.ChainedPuzzleToActiveInstance = null; });
+            builtShutdownPuzzles.Clear();
         }
 
         private ReactorShutdownObjectiveManager() : base()
