@@ -47,7 +47,7 @@ namespace EOSExt.Reactor.Managers
 
         protected override void AddDefinitions(InstanceDefinitionsForLevel<ReactorStartupOverride> definitions)
         {
-            definitions.Definitions.ForEach(def => def.Overrides.Sort((o1, o2) => o1.WaveIndex < o2.WaveIndex ? -1 : (o1.WaveIndex > o2.WaveIndex ? 1 : 0)));
+            definitions.Definitions.ForEach(def => def.Overrides.Sort((o1, o2) => o1.WaveIndex.CompareTo(o2.WaveIndex)));
             base.AddDefinitions(definitions);
         }
 
@@ -71,9 +71,9 @@ namespace EOSExt.Reactor.Managers
             def.ChainedPuzzleToActiveInstance = reactor.m_chainedPuzzleToStartSequence;
             if(def.ChainedPuzzleToActiveInstance != null)
             {
-                def.ChainedPuzzleToActiveInstance.OnPuzzleSolved += new System.Action(() => 
-                    def.EventsOnActive.ForEach(e => WardenObjectiveManager.CheckAndExecuteEventsOnTrigger(e, eWardenObjectiveEventTrigger.None, true))
-                );
+                //def.ChainedPuzzleToActiveInstance.OnPuzzleSolved += new System.Action(() => 
+                //    def.EventsOnActive.ForEach(e => WardenObjectiveManager.CheckAndExecuteEventsOnTrigger(e, eWardenObjectiveEventTrigger.None, true))
+                //);
             }
 
             builtOverride.Add(def);

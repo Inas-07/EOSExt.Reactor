@@ -14,7 +14,17 @@ namespace EOSExt.Reactor.Patches
     {
         private static void Startup_OnStateChange(LG_WardenObjective_Reactor reactor, pReactorState oldState, pReactorState newState, bool isDropinState)
         {
+            if (isDropinState) return;
 
+            var idx = ReactorInstanceManager.Current.GetZoneInstanceIndex(reactor);
+            var def = ReactorStartupOverrideManager.Current.GetDefinition(reactor.SpawnNode.m_dimension.DimensionIndex, reactor.OriginLayer, reactor.SpawnNode.m_zone.LocalIndex, idx);
+            if (def == null) return;
+
+            // NOTE: eReactorStatus.Active_Idle is for shutdown
+            if (oldState.status == eReactorStatus.Inactive_Idle && reactor.m_chainedPuzzleToStartSequence != null)
+            {
+                def.EventsOnActive.ForEach(e => WardenObjectiveManager.CheckAndExecuteEventsOnTrigger(e, eWardenObjectiveEventTrigger.None, true));
+            }
         }
 
         private static void Shutdown_OnStateChange(LG_WardenObjective_Reactor reactor, pReactorState oldState, pReactorState newState, bool isDropinState, ReactorShutdownDefinition def)
@@ -22,6 +32,7 @@ namespace EOSExt.Reactor.Patches
             switch (newState.status)
             {
                 case eReactorStatus.Shutdown_intro:
+
                     GuiManager.PlayerLayer.m_wardenIntel.ShowSubObjectiveMessage("", Text.Get(1080U));
                     reactor.m_progressUpdateEnabled = true;
                     reactor.m_currentDuration = 15f;
@@ -29,7 +40,6 @@ namespace EOSExt.Reactor.Patches
                     reactor.m_sound.Stop();
 
                     def.EventsOnActive.ForEach(e => WardenObjectiveManager.CheckAndExecuteEventsOnTrigger(e, eWardenObjectiveEventTrigger.None, true));
-
                     break;
 
                 case eReactorStatus.Shutdown_waitForVerify:
@@ -65,11 +75,19 @@ namespace EOSExt.Reactor.Patches
 
         // full overwrite
         [HarmonyPrefix]
+        [HarmonyWrapSafe]
         [HarmonyPatch(typeof(LG_WardenObjective_Reactor), nameof(LG_WardenObjective_Reactor.OnStateChange))]
         private static bool Pre_LG_WardenObjective_Reactor_OnStateChange(LG_WardenObjective_Reactor __instance,
             pReactorState oldState, pReactorState newState, bool isDropinState)
         {
-            if (__instance.m_isWardenObjective) return true;
+            if (__instance.m_isWardenObjective)
+            {
+                if (ReactorInstanceManager.Current.IsStartupReactor(__instance))
+                {
+                    Startup_OnStateChange(__instance, oldState, newState, isDropinState);
+                }
+                return true; // also use vanilla impl
+            }
 
             if (oldState.stateCount != newState.stateCount)
                 __instance.OnStateCountUpdate(newState.stateCount);
@@ -77,17 +95,14 @@ namespace EOSExt.Reactor.Patches
                 __instance.OnStateProgressUpdate(newState.stateProgress);
             if (oldState.status == newState.status)
                 return false;
+
             __instance.ReadyForVerification = false;
 
-            var zoneInstanceIndex = ReactorInstanceManager.Current.GetZoneInstanceIndex(__instance);
-            var globalZoneIndex = ReactorInstanceManager.Current.GetGlobalZoneIndex(__instance);
+            if (ReactorInstanceManager.Current.IsShutdownReactor(__instance))
+            {
+                var zoneInstanceIndex = ReactorInstanceManager.Current.GetZoneInstanceIndex(__instance);
+                var globalZoneIndex = ReactorInstanceManager.Current.GetGlobalZoneIndex(__instance);
 
-            if (ReactorInstanceManager.Current.IsStartupReactor(__instance))
-            {
-                return true; // yet implemented
-            }
-            else if (ReactorInstanceManager.Current.IsShutdownReactor(__instance))
-            {
                 var def = ReactorShutdownObjectiveManager.Current.GetDefinition(globalZoneIndex, zoneInstanceIndex);
                 if (def == null)
                 {
@@ -99,7 +114,7 @@ namespace EOSExt.Reactor.Patches
             }
             else
             {
-                EOSLogger.Error($"Reactor_OnStateChange: found built custom reactor but it's neither startup nor shutdown reactor, what happened?");
+                EOSLogger.Error($"Reactor_OnStateChange: found built custom reactor but it's not a shutdown reactor, what happened?");
                 return false;
             }
 

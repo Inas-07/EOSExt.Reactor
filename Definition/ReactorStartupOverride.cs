@@ -1,6 +1,7 @@
 ﻿using ExtraObjectiveSetup.BaseClasses;
 using GameData;
 using LevelGeneration;
+using Localization;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
@@ -24,6 +25,10 @@ namespace EOSExt.Reactor.Definition
         public bool ChangeVerifyZone { get; set; } = false;
 
         public BaseInstanceDefinition VerifyZone { get; set; } = new();
+
+        public bool UseCustomVerifyText { get; set; } = false;
+
+        public LocalizedText VerifySequenceText { get; set; } = null;
 
         [JsonIgnore]
         public LG_ComputerTerminal VerifyTerminal { get; set; } = null;

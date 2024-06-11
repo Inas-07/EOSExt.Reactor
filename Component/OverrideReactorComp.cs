@@ -39,26 +39,52 @@ namespace EOSExt.Reactor.Component
                 return;
             }
 
-            for(int i = 0; i < ObjectiveData.ReactorWaves.Count; i++)
-            {
-                int j = overrideData.Overrides.FindIndex(o => o.WaveIndex == i);
+            //for(int i = 0; i < ObjectiveData.ReactorWaves.Count; i++)
+            //{
+            //    int j = overrideData.Overrides.FindIndex(o => o.WaveIndex == i);
 
-                if (j != -1)
+            //    if (j != -1)
+            //    {
+            //        WaveData.Add(new WaveOverride() { 
+            //            WaveIndex = i,
+            //            VerificationType = overrideData.Overrides[j].VerificationType,
+            //            HideVerificationTimer = overrideData.Overrides[j].HideVerificationTimer,
+            //            ChangeVerifyZone = overrideData.Overrides[j].ChangeVerifyZone,
+            //            VerifyZone = overrideData.Overrides[j].VerifyZone,
+            //        });
+            //    }
+            //    else
+            //    {
+            //        WaveData.Add(new WaveOverride() { 
+            //            WaveIndex = i,
+            //        });
+            //    }
+            //}
+
+            for (int j = 0; j < overrideData.Overrides.Count; j++)
+            {
+                var overrideWave = overrideData.Overrides[j];
+                var prevOverride = j - 1 >= 0 ? overrideData.Overrides[j - 1] : null;
+                if (prevOverride != null && overrideWave.WaveIndex == prevOverride.WaveIndex)
                 {
-                    WaveData.Add(new WaveOverride() { 
-                        WaveIndex = i,
-                        VerificationType = overrideData.Overrides[j].VerificationType,
-                        HideVerificationTimer = overrideData.Overrides[j].HideVerificationTimer,
-                        ChangeVerifyZone = overrideData.Overrides[j].ChangeVerifyZone,
-                        VerifyZone = overrideData.Overrides[j].VerifyZone,
+                    EOSLogger.Error($"Found duplicate wave index {overrideWave.WaveIndex}, this could lead to reactor override exception!");
+                    continue;
+                }
+
+                for(int i = prevOverride?.WaveIndex + 1 ?? 0; i < overrideWave.WaveIndex; i++)
+                {
+                    WaveData.Add(new()
+                    {
+                        WaveIndex = i
                     });
                 }
-                else
-                {
-                    WaveData.Add(new WaveOverride() { 
-                        WaveIndex = i,
-                    });
-                }
+
+                WaveData.Add(overrideWave);
+            }
+
+            if(WaveData.Count != ObjectiveData.ReactorWaves.Count)
+            {
+                EOSLogger.Error($"WaveData.Count({WaveData.Count}) != ObjectiveData.ReactorWaves.Count({ObjectiveData.ReactorWaves.Count})"); 
             }
 
             LevelAPI.OnEnterLevel += OnEnterLevel;
@@ -346,6 +372,13 @@ namespace EOSExt.Reactor.Component
 
             var waveData = WaveData[currentWaveIndex];
 
+            string text = string.Empty;
+            //EOSLogger.Warning($"waveData.UseCustomVerifyText: {waveData.UseCustomVerifyText}");
+            if(waveData.UseCustomVerifyText)
+            {
+                text = waveData.VerifySequenceText.Id != 0 ? Text.Get(waveData.VerifySequenceText.Id) : waveData.VerifySequenceText.UntranslatedText;
+            }
+
             switch (status)
             {
                 case eReactorStatus.Startup_waitForVerify:
@@ -353,18 +386,67 @@ namespace EOSExt.Reactor.Component
                     {
                         case EOSReactorVerificationType.NORMAL:
                             if (ChainedReactor.m_currentWaveData.HasVerificationTerminal)
-                                ChainedReactor.SetGUIMessage(true, Text.Format(1103U, ChainedReactor.m_currentWaveCount, ChainedReactor.m_waveCountMax, ("<color=orange>" + ChainedReactor.m_currentWaveData.VerificationTerminalSerial + "</color>")), ePUIMessageStyle.Warning, printTimerInText: !waveData.HideVerificationTimer, timerPrefix: ("<size=125%>" + Text.Get(1104U)), timerSuffix: "</size>");
+                            {
+                                if (!waveData.UseCustomVerifyText)
+                                {
+                                    text = Text.Get(1103U);
+                                }
+                                ChainedReactor.SetGUIMessage(
+                                    true,
+                                    string.Format(text, ChainedReactor.m_currentWaveCount, ChainedReactor.m_waveCountMax, ("<color=orange>" + ChainedReactor.m_currentWaveData.VerificationTerminalSerial + "</color>")),
+                                    ePUIMessageStyle.Warning,
+                                    printTimerInText: !waveData.HideVerificationTimer,
+                                    timerPrefix: ("<size=125%>" + Text.Get(1104U)),
+                                    timerSuffix: "</size>");
+                            }
                             else
-                                ChainedReactor.SetGUIMessage(true, Text.Format(1105U, ChainedReactor.m_currentWaveCount, ChainedReactor.m_waveCountMax, ("<color=orange>" + ChainedReactor.CurrentStateOverrideCode + "</color>")), ePUIMessageStyle.Warning, printTimerInText: !waveData.HideVerificationTimer, timerPrefix: ("<size=125%>" + Text.Get(1104U)), timerSuffix: "</size>");
+                            {
+                                if (!waveData.UseCustomVerifyText)
+                                {
+                                    text = Text.Get(1105U);
+                                }
+                                ChainedReactor.SetGUIMessage(
+                                        true,
+                                        string.Format(text,
+                                        ChainedReactor.m_currentWaveCount,
+                                        ChainedReactor.m_waveCountMax,
+                                        ("<color=orange>" + ChainedReactor.CurrentStateOverrideCode + "</color>")),
+                                        ePUIMessageStyle.Warning, printTimerInText: !waveData.HideVerificationTimer,
+                                        timerPrefix: ("<size=125%>" + Text.Get(1104U)),
+                                        timerSuffix: "</size>");
+                            }
+
                             break;
 
                         case EOSReactorVerificationType.BY_SPECIAL_COMMAND:
                             string str = ChainedReactor.m_currentWaveData.HasVerificationTerminal ? ChainedReactor.m_currentWaveData.VerificationTerminalSerial : ReactorStartupOverrideManager.MainTerminalText;
-                            ChainedReactor.SetGUIMessage(true, string.Format(ReactorStartupOverrideManager.SpecialCmdVerifyText, ChainedReactor.m_currentWaveCount, ChainedReactor.m_waveCountMax, ("<color=orange>" + str + "</color>")), ePUIMessageStyle.Warning, printTimerInText: !waveData.HideVerificationTimer, timerPrefix: ("<size=125%>" + Text.Get(1104U)), timerSuffix: "</size>");
+                            if (!waveData.UseCustomVerifyText)
+                            {
+                                text = ReactorStartupOverrideManager.SpecialCmdVerifyText;
+                            }
+
+                            ChainedReactor.SetGUIMessage(
+                                true, 
+                                string.Format(text, ChainedReactor.m_currentWaveCount, ChainedReactor.m_waveCountMax, ("<color=orange>" + str + "</color>")), 
+                                ePUIMessageStyle.Warning, 
+                                printTimerInText: !waveData.HideVerificationTimer, 
+                                timerPrefix: ("<size=125%>" + Text.Get(1104U)), 
+                                timerSuffix: "</size>");
                             break;
 
                         case EOSReactorVerificationType.BY_WARDEN_EVENT:
-                            ChainedReactor.SetGUIMessage(true, string.Format(ReactorStartupOverrideManager.InfiniteWaveVerifyText, ChainedReactor.m_currentWaveCount, ChainedReactor.m_waveCountMax), ePUIMessageStyle.Warning, printTimerInText: !waveData.HideVerificationTimer, timerPrefix: ("<size=125%>" + Text.Get(1104U)), timerSuffix: "</size>");
+                            if (!waveData.UseCustomVerifyText)
+                            {
+                                text = ReactorStartupOverrideManager.InfiniteWaveVerifyText;
+                            }
+
+                            ChainedReactor.SetGUIMessage(
+                                true, 
+                                string.Format(text, ChainedReactor.m_currentWaveCount, ChainedReactor.m_waveCountMax), 
+                                ePUIMessageStyle.Warning, 
+                                printTimerInText: !waveData.HideVerificationTimer, 
+                                timerPrefix: ("<size=125%>" + Text.Get(1104U)), 
+                                timerSuffix: "</size>");
                             break;
                     }
                     
