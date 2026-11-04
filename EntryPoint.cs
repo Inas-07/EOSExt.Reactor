@@ -3,6 +3,7 @@ using BepInEx.Unity.IL2CPP;
 using HarmonyLib;
 using ExtraObjectiveSetup.ExtendedWardenEvents;
 using ExtraObjectiveSetup.JSON;
+using ExtraObjectiveSetup.JSON.MTFOPartialData;
 using EOSExt.Reactor.Managers;
 using ExtraObjectiveSetup.Utils;
 using Il2CppInterop.Runtime.Injection;
