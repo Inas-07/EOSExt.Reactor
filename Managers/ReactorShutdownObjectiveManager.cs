@@ -36,21 +36,8 @@ namespace EOSExt.Reactor.Managers
             reactor.m_overrideCodes = new string[1] { SerialGenerator.GetCodeWord() };
             //reactor.CurrentStateOverrideCode = reactor.m_overrideCodes[0];
 
-            reactor.m_terminalItem.OnWantDetailedInfo = new System.Func<Il2CppSystem.Collections.Generic.List<string>, Il2CppSystem.Collections.Generic.List<string>>(defaultDetails =>
-            {
-                List<string> stringList = new List<string>
-                {
-                    "----------------------------------------------------------------",
-                    "MAIN POWER REACTOR"
-                };
-                foreach (var detail in defaultDetails)
-                {
-                    stringList.Add(detail);
-                }
-
-                stringList.Add("----------------------------------------------------------------");
-                return stringList.ToIl2Cpp();
-            });
+            // The "MAIN POWER REACTOR" details are added by Patches/GenericTerminalItem_GetDetailedInfo.cs:
+            // assigning a managed Func to OnWantDetailedInfo marshals a managed delegate into IL2CPP and crashes on query.
             reactor.m_terminal = GOUtil.SpawnChildAndGetComp<LG_ComputerTerminal>(reactor.m_terminalPrefab, reactor.m_terminalAlign);
             reactor.m_terminal.Setup();
             reactor.m_terminal.ConnectedReactor = reactor;
