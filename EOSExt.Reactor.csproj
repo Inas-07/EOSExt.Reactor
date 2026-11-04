@@ -1,0 +1,50 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="Dependencies.props" />
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <RootNamespace>EOSExt.Reactor</RootNamespace>
+    <AssemblyName>Inas07.EOSExt.Reactor</AssemblyName>
+    <TargetFramework>net6</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Platforms>x64</Platforms>
+    <OutputPath>$(PluginsFolder)</OutputPath>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineConstants>TRACE</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Component\OverrideReactorComp.cs" />
+    <Compile Include="Definition\BaseReactorDefinition.cs" />
+    <Compile Include="Definition\ReactorShutdownDefinition.cs" />
+    <Compile Include="Definition\ReactorStartupOverride.cs" />
+    <Compile Include="Definition\WardenEvents.cs" />
+    <Compile Include="EntryPoint.cs" />
+    <Compile Include="Managers\ReactorInstanceManager.cs" />
+    <Compile Include="Managers\ReactorShutdownObjectiveManager.cs" />
+    <Compile Include="Managers\ReactorStartupOverrideManager.cs" />
+    <Compile Include="Patches\CommandInterpreter_ReactorVerify.cs" />
+    <Compile Include="Patches\GenericTerminalItem_GetDetailedInfo.cs" />
+    <Compile Include="Patches\OnTerminalStartupSequenceVerify.cs" />
+    <Compile Include="Patches\Reactor_CommandInterpreter.cs" />
+    <Compile Include="Patches\Reactor_OnBuildDone.cs" />
+    <Compile Include="Patches\Reactor_OnStateChange.cs" />
+    <Compile Include="Patches\Reactor_OnStateCountUpdate.cs" />
+    <Compile Include="Patches\Reactor_Update.cs" />
+    <Compile Include="Patches\Shutdown\Reactor_OnReactorShutdownVerifyChaosDone.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Dependencies.props" />
+  </ItemGroup>
+</Project>
