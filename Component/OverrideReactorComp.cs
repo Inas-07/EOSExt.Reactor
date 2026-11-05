@@ -10,6 +10,7 @@ using UnityEngine;
 using ExtraObjectiveSetup.Utils;
 using EOSExt.Reactor.Definition;
 using ExtraObjectiveSetup.Instances;
+using ExtraObjectiveSetup.Tweaks.TerminalTweak;
 using EOSExt.Reactor.Managers;
 
 namespace EOSExt.Reactor.Component
@@ -127,6 +128,8 @@ namespace EOSExt.Reactor.Component
             SetupVerifyZoneOverrides();
 
             SetupWaves();
+
+            ApplyCodeWordOverrides();
         }
 
         private void SetupVerifyZoneOverrides()
@@ -297,6 +300,73 @@ namespace EOSExt.Reactor.Component
             if (num_BY_SPECIAL_COMMAND == ObjectiveData.ReactorWaves.Count)
             {
                 ChainedReactor.m_terminal.TrySyncSetCommandHidden(TERM_Command.ReactorVerify);
+            }
+        }
+
+
+        /// <summary>
+        /// Replaces the vanilla code words / verify log names when the definition asks for a
+        /// different code word length or a hard log filename suffix.
+        /// </summary>
+        private void ApplyCodeWordOverrides()
+        {
+            bool customLength = overrideData.CodeWordLength != SerialGeneratorManager.CodeWordLength.Four;
+            bool hardSuffix = overrideData.UseHardLogFilenameSuffix;
+            if (!customLength && !hardSuffix) return;
+
+            if (customLength)
+            {
+                var codes = new string[ChainedReactor.m_overrideCodes.Length];
+                for (int i = 0; i < codes.Length; i++)
+                {
+                    codes[i] = SerialGeneratorManager.GetCodeWord(overrideData.CodeWordLength);
+                }
+                ChainedReactor.m_overrideCodes = codes;
+            }
+
+            foreach (var waveOverride in WaveData)
+            {
+                if (waveOverride.WaveIndex < 0 || waveOverride.WaveIndex >= ObjectiveData.ReactorWaves.Count) continue;
+
+                var waveData = ObjectiveData.ReactorWaves[waveOverride.WaveIndex];
+                if (!waveData.HasVerificationTerminal) continue;
+
+                var terminal = waveOverride.VerifyTerminal;
+                if (terminal == null)
+                {
+                    var terminals = EOSTerminalUtils.FindTerminal(
+                        ChainedReactor.SpawnNode.m_dimension.DimensionIndex,
+                        ChainedReactor.SpawnNode.LayerType,
+                        waveData.ZoneForVerification,
+                        x => x.ItemKey.Equals(waveData.VerificationTerminalSerial, StringComparison.InvariantCultureIgnoreCase));
+
+                    if (terminals == null || terminals.Count == 0)
+                    {
+                        EOSLogger.Error($"ApplyCodeWordOverrides: cannot find verify terminal for Wave_{waveOverride.WaveIndex}, skipped");
+                        continue;
+                    }
+                    terminal = terminals[0];
+                }
+
+                terminal.RemoveLocalLog(waveData.VerificationTerminalFileName.ToUpperInvariant());
+
+                if (hardSuffix)
+                {
+                    waveData.VerificationTerminalFileName = "reactor_ver" + SerialGeneratorManager.GetCodeWordPrefix(true) + ".log";
+                }
+
+                var verifyLog = new TerminalLogFileData()
+                {
+                    FileName = waveData.VerificationTerminalFileName.ToUpperInvariant(),
+                    FileContent = new LocalizedText()
+                    {
+                        UntranslatedText = string.Format(Text.Get(182408469), ChainedReactor.m_overrideCodes[waveOverride.WaveIndex].ToUpperInvariant()),
+                        Id = 0
+                    }
+                };
+
+                terminal.AddLocalLog(verifyLog, true);
+                terminal.ResetInitialOutput();
             }
         }
 
