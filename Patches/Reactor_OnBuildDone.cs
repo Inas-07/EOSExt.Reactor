@@ -3,12 +3,38 @@ using ExtraObjectiveSetup.Instances;
 using ExtraObjectiveSetup.Utils;
 using HarmonyLib;
 using LevelGeneration;
+using UnityEngine;
 
 namespace EOSExt.Reactor.Patches
 {
     [HarmonyPatch]
     internal class Reactor_OnBuildDone
     {
+        /// <summary>
+        /// Vanilla only builds 20 override codes, one per wave, so a reactor with more than 20 waves
+        /// runs out of codes. Grow the array before OnBuildDone consumes it.
+        /// </summary>
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(LG_WardenObjective_Reactor), nameof(LG_WardenObjective_Reactor.OnBuildDone))]
+        private static void Pre_LG_WardenObjective_Reactor_OnBuildDone(LG_WardenObjective_Reactor __instance)
+        {
+            if (!WardenObjectiveManager.TryGetWardenObjectiveDataForLayer(__instance.SpawnNode.LayerType, __instance.WardenObjectiveChainIndex, out var data)
+                || data?.ReactorWaves == null
+                || __instance.m_overrideCodes == null)
+            {
+                return;
+            }
+
+            int count = __instance.m_overrideCodes.Count; // 20 by default
+            string[] overrideCodes = new string[Mathf.Max(count, data.ReactorWaves.Count)];
+            for (int i = 0; i < overrideCodes.Length; i++)
+            {
+                overrideCodes[i] = i < count ? __instance.m_overrideCodes[i] : SerialGenerator.GetCodeWord();
+            }
+
+            __instance.m_overrideCodes = overrideCodes;
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch(typeof(LG_WardenObjective_Reactor), nameof(LG_WardenObjective_Reactor.OnBuildDone))]
         private static void Post_LG_WardenObjective_Reactor_OnBuildDone(LG_WardenObjective_Reactor __instance)
