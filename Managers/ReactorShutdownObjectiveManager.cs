@@ -6,6 +6,7 @@ using ExtraObjectiveSetup;
 using ExtraObjectiveSetup.BaseClasses;
 using ExtraObjectiveSetup.BaseClasses.CustomTerminalDefinition;
 using ExtraObjectiveSetup.Instances;
+using ExtraObjectiveSetup.Tweaks.TerminalTweak;
 using ExtraObjectiveSetup.Utils;
 using GameData;
 using GTFO.API;
@@ -25,7 +26,7 @@ namespace EOSExt.Reactor.Managers
 
         private List<ReactorShutdownDefinition> builtShutdownPuzzles = new();
 
-        private void GenericObjectiveSetup(LG_WardenObjective_Reactor reactor, TerminalDefinition reactorTerminalData)
+        private void GenericObjectiveSetup(LG_WardenObjective_Reactor reactor, ReactorShutdownDefinition def)
         {
             reactor.m_serialNumber = SerialGenerator.GetUniqueSerialNo();
             reactor.m_itemKey = "REACTOR_" + reactor.m_serialNumber.ToString();
@@ -33,36 +34,23 @@ namespace EOSExt.Reactor.Managers
             reactor.m_terminalItem.Setup(reactor.m_itemKey);
             reactor.m_terminalItem.FloorItemStatus = EnumUtil.GetRandomValue<eFloorInventoryObjectStatus>();
 
-            reactor.m_overrideCodes = new string[1] { SerialGenerator.GetCodeWord() };
+            reactor.m_overrideCodes = new string[1] { SerialGeneratorManager.GetCodeWord(def.CodeWordLength) };
             //reactor.CurrentStateOverrideCode = reactor.m_overrideCodes[0];
 
-            reactor.m_terminalItem.OnWantDetailedInfo = new System.Func<Il2CppSystem.Collections.Generic.List<string>, Il2CppSystem.Collections.Generic.List<string>>(defaultDetails =>
-            {
-                List<string> stringList = new List<string>
-                {
-                    "----------------------------------------------------------------",
-                    "MAIN POWER REACTOR"
-                };
-                foreach (var detail in defaultDetails)
-                {
-                    stringList.Add(detail);
-                }
-
-                stringList.Add("----------------------------------------------------------------");
-                return stringList.ToIl2Cpp();
-            });
+            // The "MAIN POWER REACTOR" details are added by Patches/GenericTerminalItem_GetDetailedInfo.cs:
+            // assigning a managed Func to OnWantDetailedInfo marshals a managed delegate into IL2CPP and crashes on query.
             reactor.m_terminal = GOUtil.SpawnChildAndGetComp<LG_ComputerTerminal>(reactor.m_terminalPrefab, reactor.m_terminalAlign);
             reactor.m_terminal.Setup();
             reactor.m_terminal.ConnectedReactor = reactor;
 
-            ReactorInstanceManager.Current.SetupReactorTerminal(reactor, reactorTerminalData);
+            ReactorInstanceManager.Current.SetupReactorTerminal(reactor, def.ReactorTerminal);
         }
 
         // create method with same name as in vanilla mono
         private void OnLateBuildJob(LG_WardenObjective_Reactor reactor, BaseReactorDefinition reactorDefinition)
         {
             reactor.m_stateReplicator = SNet_StateReplicator<pReactorState, pReactorInteraction>.Create(new iSNet_StateReplicatorProvider<pReactorState, pReactorInteraction>(reactor.Pointer), eSNetReplicatorLifeTime.DestroyedOnLevelReset);
-            GenericObjectiveSetup(reactor, reactorDefinition.ReactorTerminal);
+            GenericObjectiveSetup(reactor, (ReactorShutdownDefinition)reactorDefinition);
             reactor.m_sound = new CellSoundPlayer(reactor.m_terminalAlign.position);
             reactor.m_sound.Post(EVENTS.REACTOR_POWER_LEVEL_1_LOOP);
             reactor.m_sound.SetRTPCValue(GAME_PARAMETERS.REACTOR_POWER, 100f);
@@ -92,7 +80,7 @@ namespace EOSExt.Reactor.Managers
                 }
                 else
                 {
-                    string verificationTerminalFileName = "reactor_ver" + SerialGenerator.GetCodeWordPrefix() + ".log";
+                    string verificationTerminalFileName = "reactor_ver" + SerialGeneratorManager.GetCodeWordPrefix(def.UseHardLogFilenameSuffix) + ".log";
                     TerminalLogFileData data = new TerminalLogFileData()
                     {
                         FileName = verificationTerminalFileName,
